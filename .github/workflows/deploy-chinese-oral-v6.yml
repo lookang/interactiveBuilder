@@ -42,8 +42,11 @@ jobs:
               Cache-Control = "no-cache, no-store, must-revalidate"
           EOF
       - name: Smoke-test reading and oral interactions
+        id: qa
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
           npm init -y >/dev/null 2>&1
           npm install jsdom@26 --no-audit --no-fund >/dev/null 2>&1
           cat > /tmp/qa.mjs <<'JS'
@@ -90,9 +93,22 @@ jobs:
           d.querySelector('#sampleAudio').click();assert.match(d.querySelector('#sampleAudio').textContent,/停止完整参考答案/);
           console.log('V6 interaction QA passed');
           JS
-          node /tmp/qa.mjs
+          node /tmp/qa.mjs 2>&1 | tee /tmp/qa.log
+      - name: Post QA result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### Chinese Oral V6 QA output'
+            echo '```text'
+            cat /tmp/qa.log 2>/dev/null || echo 'No QA log was produced.'
+            echo '```'
+          } > /tmp/qa-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/qa-comment.md
       - name: Deploy to Netlify
         id: deploy
+        if: steps.qa.outcome == 'success'
         continue-on-error: true
         working-directory: site
         shell: bash
@@ -100,7 +116,7 @@ jobs:
           set -o pipefail
           npx -y @netlify/mcp@latest \
             --site-id 57387ad3-c718-430c-b3d9-4837072a1cd0 \
-            --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..VBJJeN-1gVjZxLfs.eOE85Kvfd0laevjU4Q_7QDaiz3YLc-4D8Dw0K0WDyo-ChExPHQc0am-FK4PLQtSUH8mGEAbaWmVwHzV-NNsDXJvHBlyVTcZTsvw9g6lOqAZAZ5Zi0M37xpm-DPVwtrYWTbN-u306q83vr3yIivUcJoCAFKglCKfH_n1GyFi0LO7Ce-F7Ff-eBGF_Juv4KLq0kNYjzxiEfgeoLgj1KbZTeId30I2XMJAc5wLr2Mi-sLJ72DKTOKTL0tcoBtPdbUz4u4orF9Elu9M4Xi-cOKgU5K0jehU5HGWsBvsjFFaQ-Oeuf0vPmj0rG_UwIGmAEugVQd5EpvXnaLe0LP6AbKhU_LEdJGQeFjnq4_naz6G4t_zRXLTEKZiJkiCW0BUC2YWdrZw3u5sH.u-IhiZ-Ed-4m8-Zl-wradw" \
+            --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..HtjgfMCpJKb1ieCq.GxtfQi9qPzBflwd7PeAjzERGwxSunwRnAAI7kHRFyrgOj0aOqPK7JKQQ-g8AZIPlivtfXWR8sjz8vJgzcLYTPDrLMJo3nSRHjowpGTEPwR-KputANLiXAWHrJ7RbiVNM6PtGSMJwNgcnwpLL7aL_OxXIu0_71WlndTwto_UjB_EjZMkrj5mGnCgHDoIxEh8eZPU_tLozWOAKLG2-u2UBss9wX8pFYzH1EUnoptOmp3NN3WncQ4jz275QlOs2x6SjrV0JZQ3dl7VhXdiSeYfPLFe3k9TmRwf6gmQ46NklvO6USXzrgDPrafRIRznk0dXqXjNVaxSGdXGxjq2ekDa5G6cXSbsNMTEPEmrNAKUU1Dm4x8UvO8p2QEBm5wQTSPVbxLi_dSRL.uT6uQCqSrXuCFs1Pd2nfBA" \
             --no-wait 2>&1 | tee /tmp/netlify-v6.log
       - name: Post deployment log
         if: always()
@@ -110,10 +126,10 @@ jobs:
           {
             echo '### Chinese Oral V6 deployment output'
             echo '```text'
-            tail -80 /tmp/netlify-v6.log 2>/dev/null || echo 'No deploy log was produced.'
+            tail -80 /tmp/netlify-v6.log 2>/dev/null || echo 'Deployment was skipped because QA did not pass.'
             echo '```'
           } > /tmp/comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md
-      - name: Fail if deployment failed
-        if: steps.deploy.outcome == 'failure'
+      - name: Fail if QA or deployment failed
+        if: steps.qa.outcome == 'failure' || steps.deploy.outcome == 'failure'
         run: exit 1
