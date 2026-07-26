@@ -16,18 +16,41 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Rebuild V7 site
+        id: rebuild
+        continue-on-error: true
         shell: bash
         run: |
-          set -e
-          ls -l deploy-v7
-          cat deploy-v7/part-[0-9][0-9] | base64 -d > /tmp/chinese-oral-v7.tar.gz
-          gzip -t /tmp/chinese-oral-v7.tar.gz
-          mkdir -p v7-site
-          tar -xzf /tmp/chinese-oral-v7.tar.gz -C v7-site
-          find v7-site -maxdepth 3 -type f -print
+          set -o pipefail
+          {
+            set -x
+            pwd
+            ls -la deploy-v7
+            wc -c deploy-v7/part-[0-9][0-9]
+            cat deploy-v7/part-[0-9][0-9] | base64 -d > /tmp/chinese-oral-v7.tar.gz
+            ls -l /tmp/chinese-oral-v7.tar.gz
+            gzip -t /tmp/chinese-oral-v7.tar.gz
+            mkdir -p v7-site
+            tar -xzf /tmp/chinese-oral-v7.tar.gz -C v7-site
+            find v7-site -maxdepth 3 -type f -print
+          } 2>&1 | tee /tmp/rebuild-v7.log
+
+      - name: Post rebuild result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### Chinese Oral V7 rebuild output'
+            echo '```text'
+            tail -100 /tmp/rebuild-v7.log 2>/dev/null || echo 'No rebuild output.'
+            echo '```'
+          } > /tmp/rebuild-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/rebuild-comment.md
 
       - name: Deploy to Netlify
         id: deploy
+        if: steps.rebuild.outcome == 'success'
         continue-on-error: true
         working-directory: v7-site
         shell: bash
@@ -47,11 +70,11 @@ jobs:
           {
             echo '### Chinese Oral V7 deployment output'
             echo '```text'
-            tail -80 /tmp/netlify-v7.log 2>/dev/null || echo 'No deploy output.'
+            tail -80 /tmp/netlify-v7.log 2>/dev/null || echo 'Deployment was skipped because rebuilding failed.'
             echo '```'
           } > /tmp/comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md
 
-      - name: Fail when deployment failed
-        if: steps.deploy.outcome == 'failure'
+      - name: Fail when rebuild or deployment failed
+        if: steps.rebuild.outcome == 'failure' || steps.deploy.outcome == 'failure'
         run: exit 1
