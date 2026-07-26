@@ -1,1 +1,1 @@
-Deploy diagnostics retry requested on 2026-07-26.
+Deploy retry with corrected proxy path requested on 2026-07-26.
