@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "microphone=(self)"
+    X-Content-Type-Options = "nosniff"
+    Cache-Control = "no-cache"
