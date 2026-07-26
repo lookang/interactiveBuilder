@@ -1,0 +1,60 @@
+name: Deploy Chinese Oral V7
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild and validate V7 site
+        shell: bash
+        run: |
+          set -e
+          cat deploy-v7/part-* | base64 -d > /tmp/chinese-oral-v7.tar.gz
+          mkdir -p v7-site
+          tar -xzf /tmp/chinese-oral-v7.tar.gz -C v7-site
+          node --check v7-site/public/app.js
+          node --check v7-site/public/teacher.js
+          test -f v7-site/netlify/functions/progress.mts
+          grep -q "老师进度看板" v7-site/public/teacher.html
+          grep -q "朗读全部反馈" v7-site/public/app.js
+          grep -q "@netlify/blobs" v7-site/package.json
+
+      - name: Deploy to Netlify
+        id: deploy
+        continue-on-error: true
+        working-directory: v7-site
+        shell: bash
+        run: |
+          set -o pipefail
+          npx -y @netlify/mcp@latest \
+            --site-id 57387ad3-c718-430c-b3d9-4837072a1cd0 \
+            --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..Ue2fzrp5tG_CDJkz.Bxk_7E6uMtYU-n7AO0eG4Pi1pLnJMMA2KlZfrXo-4hyIH3oDiBHGrSi_fnBGSdze2jva7DswPbURejTKhn5ypvQvi1JwCb8sKQsmhFoDV5nA4mdpUxn-zxLbp6Z_qTznBY1p4GlIKApUVO8spGSrRGdDSd0iz48_vik0XO0iPxkmJAOQE5rhOGu1mQNcPIBRx_Zvl_jjk-sjw0zt6IWqs5-MLAgdsSRtjBhq6DKyY49juQI2kQ8Xk-D16m57wbTqR-5XAA1HtZrLANLtKTMxQAjGvg-WMeBxyhgQv5pJaa2iLtVGiK0h-fM1lKNddhBUokBH4DAogRpB05FLGcnlHji9H6-qjhry0pzsZ50cEtB_TYMMeIFDedShWY4YHWHPZQAJAdq7.ugXipmOavRwQtvg2_cXBEA" \
+            --no-wait 2>&1 | tee /tmp/netlify-v7.log
+
+      - name: Post deploy result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### Chinese Oral V7 deployment output'
+            echo '```text'
+            tail -80 /tmp/netlify-v7.log 2>/dev/null || echo 'No deploy output.'
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md
+
+      - name: Fail when deployment failed
+        if: steps.deploy.outcome == 'failure'
+        run: exit 1
