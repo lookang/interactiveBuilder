@@ -1,0 +1,66 @@
+name: Deploy Chinese Oral V6
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble V6 site
+        shell: bash
+        run: |
+          set -e
+          mkdir -p site
+          cp chinese-oral-site/index.html site/index.html
+          cp chinese-oral-patch/enhancements.css site/enhancements.css
+          cp chinese-oral-patch/enhancements.js site/enhancements.js
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('site/index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('</head>','<link rel="stylesheet" href="enhancements.css?v=6"></head>')
+          s=s.replace('</body>','<script src="enhancements.js?v=6"></script></body>')
+          p.write_text(s,encoding='utf-8')
+          PY
+          cat > site/netlify.toml <<'EOF'
+          [build]
+            publish = "."
+          [[headers]]
+            for = "/*"
+            [headers.values]
+              Cache-Control = "no-cache, no-store, must-revalidate"
+          EOF
+      - name: Deploy to Netlify
+        id: deploy
+        continue-on-error: true
+        working-directory: site
+        shell: bash
+        run: |
+          set -o pipefail
+          npx -y @netlify/mcp@latest \
+            --site-id 57387ad3-c718-430c-b3d9-4837072a1cd0 \
+            --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..i4YvOx5H11RU-TtV.TYzDDsYPmDc56LXwOfbE8U8SivwsQ5BATI5b3IDepa7cpBI0DNNNlKadPp1YOdc_7Pf4KJtDSJrBer6CmZjt4Kjt6VlBUfWDzVErsMLzHxO5gOrDI9eVlT5t5v6oarWS-axgYySKWwkDDH4rtR4zItH2itrA4xwlC_U-w8F5mLKGYgFXeBpXMr55NjU52-R60jtpUq-kR4MUMnKHxYN1fBokqfVlnDeJBxnPKwRLFyp2zYpUMRFHGvsxcdqKlkLm22k5PhrMpfDPgROMwgsgooBnvClbA77_WtIQldOZCYFKLJZB0EQNP-bYEilqdXqsndtVp4RzKV3JpJM33kINSkjYxSQQn4pTpM8CA9_zMVJFtdwXgZnzCv7AgGvsfqvNoooDcs9c.AghViM-t5D_J0qTREpRe_g" \
+            --no-wait 2>&1 | tee /tmp/netlify-v6.log
+      - name: Post deployment log
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### Chinese Oral V6 deployment output'
+            echo '```text'
+            tail -80 /tmp/netlify-v6.log 2>/dev/null || echo 'No deploy log was produced.'
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md
+      - name: Fail if deployment failed
+        if: steps.deploy.outcome == 'failure'
+        run: exit 1
