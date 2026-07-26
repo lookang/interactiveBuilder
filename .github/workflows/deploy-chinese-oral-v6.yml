@@ -49,7 +49,7 @@ jobs:
           set -o pipefail
           npm init -y >/dev/null 2>&1
           npm install jsdom@26 --no-audit --no-fund >/dev/null 2>&1
-          cat > /tmp/qa.mjs <<'JS'
+          cat > qa.mjs <<'JS'
           import fs from 'node:fs';
           import assert from 'node:assert/strict';
           import {JSDOM,VirtualConsole} from 'jsdom';
@@ -93,7 +93,7 @@ jobs:
           d.querySelector('#sampleAudio').click();assert.match(d.querySelector('#sampleAudio').textContent,/停止完整参考答案/);
           console.log('V6 interaction QA passed');
           JS
-          node /tmp/qa.mjs 2>&1 | tee /tmp/qa.log
+          node qa.mjs 2>&1 | tee /tmp/qa.log
       - name: Post QA result
         if: always()
         env:
@@ -116,7 +116,7 @@ jobs:
           set -o pipefail
           npx -y @netlify/mcp@latest \
             --site-id 57387ad3-c718-430c-b3d9-4837072a1cd0 \
-            --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..HtjgfMCpJKb1ieCq.GxtfQi9qPzBflwd7PeAjzERGwxSunwRnAAI7kHRFyrgOj0aOqPK7JKQQ-g8AZIPlivtfXWR8sjz8vJgzcLYTPDrLMJo3nSRHjowpGTEPwR-KputANLiXAWHrJ7RbiVNM6PtGSMJwNgcnwpLL7aL_OxXIu0_71WlndTwto_UjB_EjZMkrj5mGnCgHDoIxEh8eZPU_tLozWOAKLG2-u2UBss9wX8pFYzH1EUnoptOmp3NN3WncQ4jz275QlOs2x6SjrV0JZQ3dl7VhXdiSeYfPLFe3k9TmRwf6gmQ46NklvO6USXzrgDPrafRIRznk0dXqXjNVaxSGdXGxjq2ekDa5G6cXSbsNMTEPEmrNAKUU1Dm4x8UvO8p2QEBm5wQTSPVbxLi_dSRL.uT6uQCqSrXuCFs1Pd2nfBA" \
+            --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..gw6glwzYjjnlaqQx.DvEt8SowhOxD1EqIbuAHP44WNwJEEpLx3ASuaE0hA6Q42oPcStCkBr1XCMSyJ8_513x0Wh7ursNK8sEJ9ZBjulv-4N4l65VnSlyhsHjGUqiH7XDIh9KiJf6Ou8lwNkTNOXsLvhM0q66dh_X9olfPJm2c_7Q-lsOh_e2FWCzSSQ_pdgk54h2UVxP-az9BMlY-6PiUZ5grDKJSZAMnmerY-ndinSGUEjkFcmwGXUAx69BlvZ-0SGqo-Ui6JUl7SChnNfm5i2PPFXoG7Zi140YrurYS4oUE7zavdKKSEnOJXDfZxuMGJbPCPfuxf3JSjJG7AU7JBwE9rxvAZA13jkeOX8Pa2Cl7yUEyA3bhlZPt6oXOBHy9mqWcfu3pAsJf1RUrn5biBLxm.WgjGLrVHsOYoyjdE8HsC7Q" \
             --no-wait 2>&1 | tee /tmp/netlify-v6.log
       - name: Post deployment log
         if: always()
