@@ -1,16 +1,16 @@
 name: Deploy Chinese Oral App
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "chinese-oral-site/**"
-      - ".github/workflows/deploy-chinese-oral-netlify.yml"
   pull_request:
     branches: [main]
     paths:
       - "chinese-oral-site/**"
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   deploy:
@@ -18,15 +18,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Netlify
+        id: deploy
+        continue-on-error: true
         working-directory: chinese-oral-site
         shell: bash
         run: |
           set -o pipefail
           npx -y @netlify/mcp@latest \
             --site-id 57387ad3-c718-430c-b3d9-4837072a1cd0 \
-            --proxy-path "https://netlify-mcp.netlify.app//proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..HXpkGHbRyjRbI19-.4xIUZPNyG6ryel3Wk1Z-uIufSJFPU6ZAYV4a_lUSMACb6l2rVfERGpja6UxiN1_Y3He_4Lkbqq8xRVvCY-h0vAI8SwhexJdfLmMdPPTEa7nScSYk7zsmwanAD-c664_wTCu5k9TYkakVs4ci_Vj8Jfl1-CofwbM7e7xFxch7YYCpAlqHzrzo1TBMvmE7Sx2tEp3Sl9-kvMpiqOafdQVU3Hlu4towWrnILwn4iKwkSITN71Ji_p4cYC_GcZbcVDNXfp1YF13-ODkaRkWsnwJAefKXRQ9Um7asXrYlM9jl4F3DJImb5mbvSRJpmLc6zBlXh0iGde7mNCShyKKNI_-KbixNfJ_00IRrMtX19YV_-PZFlVH2fu3QNIQJsELDOMp-nVafIHsJ.SgOyGNdfo0AYBEB0aY9WKg" \
+            --proxy-path "https://netlify-mcp.netlify.app//proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..noHOHjGUzFN_K0Iy.vcALwyOv7Fl7VB1kbJHrUm-3SlRRG5KiQao-U6jKccfr1RB0EAuGMnedSGSKVcQ_tvuYWesQ_IRqoMST_en3PH6o_R1aarG2cKUs2r_k6ws8yhtcjJOclNn4ANwCmgOFg9kCQgZ4nkskJOmUl--3luppS41aIAVM3DjxwlHy-pv5Ez1xFjPGPHpqgJv5Pbx2tW8Et3AvKXinevQrrNILDlfAFmUxDcpyk96Q18zJgDOCxwgAKUfJFU-LXPVUzHZN9kZfQmZMvhpCoGTC_Rq0JeTsGfj2pbDgAguGdsZRhrEpic8mLt1qn1EPP4Wzi-MWkDcRB-KyHWwjpvm3g2d8gvdFa3bNML8AQJ8y23g3_ehd1cBufjV0LIGf42rTALKPTzbLklvk.y7YwKUWSpmIZXA3hDIwvOw" \
             --no-wait 2>&1 | tee /tmp/netlify-deploy.log
-          code=${PIPESTATUS[0]}
-          echo "--- deployment tail ---"
-          tail -100 /tmp/netlify-deploy.log
-          exit $code
+      - name: Post deployment result
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### Netlify deployment output'
+            echo '```text'
+            tail -80 /tmp/netlify-deploy.log 2>/dev/null || echo 'No deployment log was produced.'
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md
+      - name: Fail when deployment failed
+        if: steps.deploy.outcome == 'failure'
+        run: exit 1
