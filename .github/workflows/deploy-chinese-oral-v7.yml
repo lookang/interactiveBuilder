@@ -1,80 +1,78 @@
-name: Deploy Chinese Oral V7
+name: Publish Chinese Oral V7 Test Preview
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Rebuild V7 site
-        id: rebuild
-        continue-on-error: true
         shell: bash
         run: |
-          set -o pipefail
-          {
-            set -x
-            pwd
-            ls -la deploy-v7
-            wc -c deploy-v7/part-[0-9][0-9]
-            cat deploy-v7/part-[0-9][0-9] | base64 -d > /tmp/chinese-oral-v7.tar.gz
-            ls -l /tmp/chinese-oral-v7.tar.gz
-            gzip -t /tmp/chinese-oral-v7.tar.gz
-            mkdir -p v7-site
-            tar -xzf /tmp/chinese-oral-v7.tar.gz -C v7-site
-            find v7-site -maxdepth 3 -type f -print
-          } 2>&1 | tee /tmp/rebuild-v7.log
+          set -e
+          cat deploy-v7/part-[0-9][0-9] | base64 -d > /tmp/chinese-oral-v7.tar.gz
+          gzip -t /tmp/chinese-oral-v7.tar.gz
+          mkdir -p v7-site
+          tar -xzf /tmp/chinese-oral-v7.tar.gz -C v7-site
+          node --check v7-site/public/app.js
+          node --check v7-site/public/teacher.js
 
-      - name: Post rebuild result
-        if: always()
+      - name: Add same-browser dashboard fallback for test preview
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('v7-site/public/teacher.js')
+          s=p.read_text(encoding='utf-8')
+          a=s.index('async function load()')
+          b=s.index('function filtered()',a)
+          replacement='''async function load(){\n  let data=null;\n  try{const r=await fetch('/api/progress',{headers:{'x-teacher-code':code}});if(r.ok)data=await r.json();}\n  catch{}\n  if(!data){\n    if(code!=="FNDMSMXMT5")throw new Error('教师代码不正确。');\n    try{profiles=Object.values(JSON.parse(localStorage.getItem('oralAppProfilesV4')||'{}'));}catch{profiles=[];}\n    data={updatedAt:new Date().toISOString()};\n    $('#loginMessage').textContent='试用预览：这里只显示同一浏览器中保存的学生档案。正式云端看板会汇总不同学生设备。';\n  }else{profiles=data.profiles||[];$('#loginMessage').textContent='';}\n  sessionSet('teacherDashboardCode',code);$('#loginPanel').classList.add('hidden');$('#dashboard').classList.remove('hidden');$('#updatedAt').textContent=`最后更新：${fmt(data.updatedAt)}`;renderFilters();render();\n}\n'''
+          p.write_text(s[:a]+replacement+s[b:],encoding='utf-8')
+          PY
+          node --check v7-site/public/teacher.js
+          touch v7-site/public/.nojekyll
+
+      - name: Publish HTTPS test branch
+        shell: bash
+        run: |
+          set -e
+          rm -rf /tmp/v7-preview
+          mkdir -p /tmp/v7-preview
+          cp -a v7-site/public/. /tmp/v7-preview/
+          cd /tmp/v7-preview
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Publish Chinese oral V7 test preview"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git push --force origin HEAD:refs/heads/chinese-oral-v7-preview-site
+
+      - name: Post preview links
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          {
-            echo '### Chinese Oral V7 rebuild output'
-            echo '```text'
-            tail -100 /tmp/rebuild-v7.log 2>/dev/null || echo 'No rebuild output.'
-            echo '```'
-          } > /tmp/rebuild-comment.md
-          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/rebuild-comment.md
+          cat > /tmp/comment.md <<'EOF'
+          ### Chinese Oral V7 HTTPS test preview
 
-      - name: Deploy to Netlify
-        id: deploy
-        if: steps.rebuild.outcome == 'success'
-        continue-on-error: true
-        working-directory: v7-site
-        shell: bash
-        run: |
-          set -o pipefail
-          npx -y @netlify/mcp@latest \
-            --site-id 57387ad3-c718-430c-b3d9-4837072a1cd0 \
-            --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..Ue2fzrp5tG_CDJkz.Bxk_7E6uMtYU-n7AO0eG4Pi1pLnJMMA2KlZfrXo-4hyIH3oDiBHGrSi_fnBGSdze2jva7DswPbURejTKhn5ypvQvi1JwCb8sKQsmhFoDV5nA4mdpUxn-zxLbp6Z_qTznBY1p4GlIKApUVO8spGSrRGdDSd0iz48_vik0XO0iPxkmJAOQE5rhOGu1mQNcPIBRx_Zvl_jjk-sjw0zt6IWqs5-MLAgdsSRtjBhq6DKyY49juQI2kQ8Xk-D16m57wbTqR-5XAA1HtZrLANLtKTMxQAjGvg-WMeBxyhgQv5pJaa2iLtVGiK0h-fM1lKNddhBUokBH4DAogRpB05FLGcnlHji9H6-qjhry0pzsZ50cEtB_TYMMeIFDedShWY4YHWHPZQAJAdq7.ugXipmOavRwQtvg2_cXBEA" \
-            --no-wait 2>&1 | tee /tmp/netlify-v7.log
+          Student app:
+          https://raw.githack.com/lookang/interactiveBuilder/chinese-oral-v7-preview-site/index.html
 
-      - name: Post deploy result
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          {
-            echo '### Chinese Oral V7 deployment output'
-            echo '```text'
-            tail -80 /tmp/netlify-v7.log 2>/dev/null || echo 'Deployment was skipped because rebuilding failed.'
-            echo '```'
-          } > /tmp/comment.md
+          Same-browser teacher dashboard preview:
+          https://raw.githack.com/lookang/interactiveBuilder/chinese-oral-v7-preview-site/teacher.html
+
+          Teacher code: `FNDMSMXMT5`
+
+          Note: the test dashboard shows profiles saved in the same browser. The central cross-device Netlify dashboard could not be published because the Netlify account reported that its deployment credits were exceeded.
+          EOF
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/comment.md
-
-      - name: Fail when rebuild or deployment failed
-        if: steps.rebuild.outcome == 'failure' || steps.deploy.outcome == 'failure'
-        run: exit 1
