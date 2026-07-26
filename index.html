@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-SG">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1677e8" />
+  <meta name="description" content="适合小五、小六学生的华文朗读与口语会话自主练习应用。" />
+  <title>华文口语练习小助手</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" aria-label="主要选单">
+      <button class="brand" data-nav="home" aria-label="回到首页">
+        <span class="brand-mascot">🗣️</span>
+        <span><strong>小学华文</strong><small>口语练习小助手</small></span>
+      </button>
+      <nav class="side-nav">
+        <button class="nav-item active" data-nav="home"><span>⌂</span>首页</button>
+        <button class="nav-item" data-nav="reading"><span>📖</span>口语朗读</button>
+        <button class="nav-item" data-nav="conversation"><span>💬</span>口语会话</button>
+        <div class="nav-divider"></div>
+        <button class="nav-item" data-nav="progress"><span>🏆</span>我的进度</button>
+      </nav>
+      <div class="sidebar-note"><strong>练习小贴士</strong><p>找一个安静的地方，戴上耳机，并允许浏览器使用麦克风。</p></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button id="mobileMenu" class="mobile-menu" aria-label="打开选单">☰</button>
+        <div><p id="greeting" class="greeting">欢迎回来，小朋友！</p><p class="subtitle">说一说，学一学，一次比一次更进步。</p></div>
+        <div class="star-box" title="完成一次练习可获得星星">⭐ <strong id="starCount">0</strong></div>
+      </header>
+
+      <section id="homeView" class="view active-view">
+        <div class="hero-strip">
+          <div><h1>今天想练习哪一部分？</h1><p>先听范读，再大胆开口。每次使用相同的姓名和班级，系统会在这台设备上接续同一个学习档案。</p></div>
+          <div class="student-profile-panel">
+            <div class="student-fields">
+              <label>姓名<input id="studentName" maxlength="30" autocomplete="off" placeholder="例如：Tan Mei Li" /></label>
+              <label>班级<input id="studentClass" maxlength="20" autocomplete="off" placeholder="例如：6A" /></label>
+              <button id="activateProfileBtn" class="profile-btn">确认／载入进度</button>
+            </div>
+            <p class="profile-reminder"><strong>请记得：</strong>每次练习都输入相同的姓名和班级，例如“Tan Mei Li + 6A”，系统就会继续累积这个档案的进度。大小写或多余空格不会另建档案。姓名、班级、分数和完成记录会同步到教师看板；录音不会上传。</p>
+            <div id="savedProfileRow" class="saved-profile-row hidden"><label>这台设备已有的档案<select id="savedProfileSelect" aria-label="选择已有学生档案"></select></label><button id="loadSavedProfileBtn" class="outline-btn">载入已有档案</button></div>
+            <p id="activeProfileStatus" class="active-profile-status">尚未载入学生档案。</p>
+          </div>
+        </div>
+
+        <div class="mode-grid">
+          <article class="mode-card reading-card"><div class="mode-icon">📖</div><h2>口语朗读</h2><p>选择小五或小六篇章，听范读、录音朗读，并找出需要加强的词语。</p><div class="grade-pills"><span>P5</span><span>P6</span></div><button class="primary-btn blue" data-nav="reading">开始练习 <span>→</span></button></article>
+          <article class="mode-card conversation-card"><div class="mode-icon">💬</div><h2>口语会话</h2><p>选择教材、人工智能或扩展话题，回答问题，并在老师式追问的引导下逐步完善答案。</p><div id="topicCountHome" class="topic-count">26 个话题等你来挑战</div><button class="primary-btn green" data-nav="conversation">开始练习 <span>→</span></button></article>
+        </div>
+
+        <div class="compatibility-note"><span>ℹ️</span><p><strong>建议使用 Microsoft Edge 或 Google Chrome。</strong> 自动语音文字和反馈只供自主练习参考，可能受环境噪音、设备和说话速度影响。</p></div>
+        <div class="mic-test-card">
+          <div><strong>先测试麦克风</strong><p id="micTestStatus">点击按钮，说一句“大家好”，系统会录下约三秒让你播放检查。</p></div>
+          <div class="mic-test-actions"><button id="micTestBtn" class="mic-test-btn">🎙️ 测试麦克风（3秒）</button><audio id="micTestPlayback" controls hidden></audio></div>
+        </div>
+      </section>
+
+      <section id="readingView" class="view">
+        <div class="section-head blue-head"><div><button class="back-link" data-nav="home">←</button><span>口语朗读</span></div><div class="segmented" role="group" aria-label="选择年级"><button class="grade-btn active" data-grade="P5">P5</button><button class="grade-btn" data-grade="P6">P6</button></div></div>
+        <div class="reading-layout">
+          <aside class="passage-list-panel"><div class="list-heading"><strong id="passageListTitle">P5 朗读篇章</strong><span id="passageProgress">0 / 10</span></div><div id="passageList" class="passage-list"></div></aside>
+          <div class="practice-column">
+            <article class="practice-card passage-card"><div class="card-title-row"><div><span class="small-label">短文朗读</span><h2 id="passageTitle"></h2></div><button id="playModelReading" class="outline-btn model-reading-btn">🔊 播放范读</button></div><div id="passageText" class="passage-text" aria-live="polite"></div><div id="targetWordChips" class="target-word-chips" aria-label="本篇重点词语"></div><div class="target-legend"><span class="dot blue-dot"></span>蓝色词语是本篇的重点词语。录音后，绿色表示已识别，红色表示可能漏读或发音不够清楚。</div><div id="modelReadingStatus" class="playback-status"><span class="status-bars"><i></i><i></i><i></i></span><span>点击“播放范读”听完整篇章。</span></div></article>
+            <article id="readingRecordingCard" class="practice-card recording-card reading-recording-card"><div class="recording-main-copy"><span class="small-label">朗读录音</span><h3 id="readingRecordStatus">点击“开始录音”朗读篇章</h3><div class="recording-time-row"><span id="readingLiveDot" class="live-dot"></span><strong id="readingTimer">00:00</strong><span>录音时会显示红点和计时</span></div><p class="recording-guidance">第一次使用时，请在浏览器提示中选择“允许麦克风”。</p></div><button id="readingRecordBtn" class="mic-btn blue-mic labelled-mic" aria-label="开始或停止朗读录音"><span class="mic-symbol">🎙️</span><span id="readingRecordBtnLabel">开始录音</span></button><audio id="readingPlayback" controls hidden></audio><div class="reading-transcript-panel"><div class="transcript-heading"><div><strong>系统识别到的朗读文字</strong><p>系统会把录音转成文字，用来检查重点词语。若有错字，可在录音后修正。</p></div><span id="readingRecognitionState" class="recognition-state">等待录音</span></div><textarea id="readingTranscriptEditor" class="transcript-editor" placeholder="录音时，系统识别到的文字会显示在这里。"></textarea><div class="transcript-action-row"><span id="readingRecognitionHint" class="transcript-help">录音结束后会自动检查；没有文字时也会说明下一步。</span><button id="analyseReadingTextBtn" class="small-action-btn primary-analysis">查看朗读反馈</button></div></div></article>
+            <article id="readingFeedback" class="practice-card feedback-card hidden"><div class="feedback-title"><div><span class="small-label">发音反馈</span><h3>重点词语检查</h3></div><div id="readingScore" class="score-ring">--</div></div><div id="readingTranscript" class="transcript-box"></div><div id="wordFeedbackList" class="word-feedback-list"></div><div id="readingOverall" class="overall-tip"></div></article>
+            <div class="bottom-actions"><button id="prevPassage" class="secondary-btn">上一篇</button><button id="nextPassage" class="primary-btn blue">下一篇</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="conversationView" class="view">
+        <div class="section-head green-head"><div><button class="back-link" data-nav="home">←</button><span>口语会话</span></div><span id="topicCounter">话题 1 / 26</span></div>
+        <div class="topic-picker-panel"><label for="topicSelect"><strong>选择会话话题</strong><span>每个题目都有不同重点，避免重复练习同一内容。</span></label><select id="topicSelect" aria-label="选择会话话题"></select><span id="topicCompletionHint" class="topic-completion-hint"></span></div>
+        <div class="conversation-layout">
+          <div class="conversation-main">
+            <article class="practice-card topic-card">
+              <span class="small-label green-text">会话话题</span><h2 id="topicTitle"></h2><p id="topicScenario" class="topic-scenario"></p><div class="topic-focus"><strong>本题重点：</strong><span id="topicFocus"></span></div>
+              <div class="conversation-instruction"><strong>模拟口试流程</strong><span>点击问题听题 → 回答并录音 → 完成后进入下一题。系统会在所有问题回答完毕后，提供整体反馈。</span></div>
+              <div id="topicQuestionList" class="question-list question-practice-list"></div>
+              <div class="trees-guide" aria-label="五步口语法"><div class="trees-guide-head"><strong>五步口语法</strong><span>根据题目选择合适的步骤，不必每次把五项都说完。</span></div><div class="trees-grid"><div><b>看法</b><span>清楚说明你的看法或感受</span><em>我认为……／我觉得……</em></div><div><b>原因</b><span>说明为什么会有这个看法</span><em>因为……所以……</em></div><div><b>解释</b><span>深入说明影响、结果或道理</span><em>如果大家都……就会……</em></div><div><b>经历</b><span>分享亲身经历或具体例子</span><em>记得有一次……／我曾经看过……</em></div><div><b>建议</b><span>提出可行的做法或行动</span><em>我建议……／如果我是他，我会……</em></div></div></div>
+              <div id="scaffoldBox" class="scaffold-box"><strong>💡 当前提示</strong><p id="scaffoldText">先听清楚问题，再直接回答。</p><button id="newPromptBtn" class="text-btn">换一个提示</button></div>
+              <div id="sampleLockedMessage" class="sample-locked-message">🔒 完成三道问题后，才会开放完整参考答案。</div><details id="sampleAnswerDetails" class="sample-answer hidden"><summary>最后一步：查看完整参考答案</summary><div class="sample-audio-row"><button id="sampleAnswerAudioBtn" class="sample-audio-btn">🔊 播放完整参考答案</button><span id="sampleAudioStatus">可随时点击停止。先比较内容，再用自己的语言重练。</span></div><div id="sampleAnswerText" class="sample-answer-text"></div><small>参考答案根据教材内容整理，只提供思路。请用自己的经历和语言来回答，不必背诵。</small></details>
+            </article>
+          </div>
+          <aside class="conversation-side"><article id="conversationFeedback" class="practice-card feedback-card"><span class="small-label green-text">逐题口语反馈</span><h3>系统会按题目和你的回答，选出最有用的改进方向</h3><div id="conversationProgressSummary" class="conversation-progress-summary">尚未开始回答。</div><button id="feedbackAudioBtn" class="feedback-audio-btn hidden">🔊 朗读全部反馈</button><div id="questionFeedbackList" class="question-feedback-list"></div><div id="rubricFeedback" class="rubric-list hidden"></div><div id="sampleInsightBox" class="sample-insight-box hidden"></div><div id="conversationOverall" class="overall-tip neutral hidden"></div><div id="teacherCoach" class="teacher-coach hidden"></div></article></aside>
+        </div>
+        <div class="bottom-actions conversation-actions"><button id="prevTopic" class="secondary-btn">上一题</button><button id="nextTopic" class="primary-btn green">下一题</button></div>
+      </section>
+
+      <section id="progressView" class="view"><div class="section-head gold-head"><div><button class="back-link" data-nav="home">←</button><span>我的进度</span></div><span id="progressProfileLabel">尚未载入档案</span></div><div class="progress-grid"><article class="progress-card"><span>⭐</span><strong id="progressStars">0</strong><p>累计星星</p></article><article class="progress-card"><span>📖</span><strong id="progressReading">0</strong><p>完成朗读</p></article><article class="progress-card"><span>💬</span><strong id="progressConversation">0</strong><p>完成会话</p></article></div><article class="practice-card progress-detail"><h2>练习记录</h2><div id="progressHistory" class="history-list"></div><button id="resetProgress" class="danger-link">清除这台设备上的练习记录</button></article></section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="data.js?v=7"></script>
+  <script src="app.js?v=7"></script>
+</body>
+</html>

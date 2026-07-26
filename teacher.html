@@ -1,0 +1,11 @@
+<!doctype html><html lang="zh-SG"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>华文口语练习｜教师看板</title><link rel="stylesheet" href="teacher.css?v=7"></head><body>
+<header><div><span class="eyebrow">教师专用</span><h1>华文口语练习进度看板</h1><p>查看学生完成的朗读与口语练习。学生录音不会上传。</p></div><a href="/">返回学生练习</a></header>
+<main>
+<section id="loginPanel" class="card login"><h2>输入教师代码</h2><p>教师代码只用于打开本次试用看板。</p><div class="login-row"><input id="teacherCode" type="password" autocomplete="current-password" placeholder="教师代码"><button id="loginBtn">进入看板</button></div><p id="loginMessage" class="message"></p></section>
+<section id="dashboard" class="hidden">
+<div class="toolbar card"><div><strong>学生进度</strong><span id="updatedAt"></span></div><div class="toolbar-actions"><input id="searchBox" placeholder="搜索姓名或班级"><select id="classFilter"><option value="">所有班级</option></select><button id="refreshBtn">刷新</button><button id="exportBtn">导出 CSV</button></div></div>
+<div class="summary"><article><span>👥</span><strong id="studentCount">0</strong><p>学生档案</p></article><article><span>📖</span><strong id="readingCount">0</strong><p>朗读完成数</p></article><article><span>💬</span><strong id="oralCount">0</strong><p>口语完成数</p></article><article><span>⭐</span><strong id="starCount">0</strong><p>累计星星</p></article></div>
+<section class="card table-card"><div class="table-wrap"><table><thead><tr><th>学生</th><th>班级</th><th>朗读</th><th>口语</th><th>星星</th><th>最后练习</th><th></th></tr></thead><tbody id="studentRows"></tbody></table></div><div id="emptyState" class="empty hidden">暂时没有学生进度。</div></section>
+<section id="detailPanel" class="card detail hidden"><div class="detail-head"><div><span>学生详情</span><h2 id="detailName"></h2></div><button id="closeDetail">关闭</button></div><div id="detailStats" class="detail-stats"></div><h3>最近练习记录</h3><div id="detailHistory" class="history"></div></section>
+</section>
+</main><div id="toast" class="toast"></div><script src="teacher.js?v=7"></script></body></html>
