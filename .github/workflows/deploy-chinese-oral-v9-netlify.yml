@@ -16,28 +16,35 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Rebuild and validate V9 site
+        id: rebuild
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          cat deploy-v7/part-[0-9][0-9] | base64 -d > /tmp/chinese-oral-final.tar.gz
-          gzip -t /tmp/chinese-oral-final.tar.gz
-          mkdir -p final-site
-          tar -xzf /tmp/chinese-oral-final.tar.gz -C final-site
+          set -o pipefail
+          {
+            set -euxo pipefail
+            cat deploy-v7/part-[0-9][0-9] | base64 -d > /tmp/chinese-oral-final.tar.gz
+            gzip -t /tmp/chinese-oral-final.tar.gz
+            mkdir -p final-site
+            tar -xzf /tmp/chinese-oral-final.tar.gz -C final-site
 
-          cat deploy-v8/patch-* > /tmp/dashboard-v8.patch
-          patch -d final-site -p1 < /tmp/dashboard-v8.patch
+            cat deploy-v8/patch-* > /tmp/dashboard-v8.patch
+            patch -d final-site -p1 < /tmp/dashboard-v8.patch
 
-          cat deploy-v9/part-* | base64 -d | gzip -d > /tmp/v9.patch
-          patch -d final-site -p1 < /tmp/v9.patch
+            cat deploy-v9/part-* | base64 -d | gzip -d > /tmp/v9.patch
+            wc -c /tmp/v9.patch
+            patch -d final-site -p1 < /tmp/v9.patch
 
-          node --check final-site/public/app.js
-          grep -q '学习进度排行榜' final-site/public/index.html
-          grep -q 'CLOUD_TRANSCRIBE_ENDPOINT' final-site/public/app.js
-          test -f final-site/netlify/functions/progress.mts
-          test -f final-site/netlify/functions/transcribe.mts
+            node --check final-site/public/app.js
+            grep -q '学习进度排行榜' final-site/public/index.html
+            grep -q 'CLOUD_TRANSCRIBE_ENDPOINT' final-site/public/app.js
+            test -f final-site/netlify/functions/progress.mts
+            test -f final-site/netlify/functions/transcribe.mts
+          } 2>&1 | tee /tmp/rebuild-v9.log
 
       - name: Deploy V9 to Netlify
         id: deploy
+        if: steps.rebuild.outcome == 'success'
         continue-on-error: true
         working-directory: final-site
         shell: bash
@@ -55,13 +62,18 @@ jobs:
         shell: bash
         run: |
           {
-            echo '### Chinese Oral V9 Netlify deployment output'
+            echo '### Chinese Oral V9 build and deployment output'
+            echo '#### Rebuild'
             echo '```text'
-            tail -100 /tmp/netlify-v9.log 2>/dev/null || echo 'No deployment output was produced.'
+            tail -120 /tmp/rebuild-v9.log 2>/dev/null || echo 'No rebuild output was produced.'
+            echo '```'
+            echo '#### Netlify'
+            echo '```text'
+            tail -100 /tmp/netlify-v9.log 2>/dev/null || echo 'Deployment was not started.'
             echo '```'
           } > /tmp/deploy-comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/deploy-comment.md
 
-      - name: Fail when deployment command failed
-        if: steps.deploy.outcome == 'failure'
+      - name: Fail when build or deployment failed
+        if: steps.rebuild.outcome == 'failure' || steps.deploy.outcome == 'failure'
         run: exit 1
