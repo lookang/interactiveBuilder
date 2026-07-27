@@ -31,9 +31,21 @@ jobs:
             cat deploy-v8/patch-* > /tmp/dashboard-v8.patch
             patch -d final-site -p1 < /tmp/dashboard-v8.patch
 
-            cat deploy-v9/part-* | base64 -d | gzip -d > /tmp/v9.patch
-            wc -c /tmp/v9.patch
-            patch -d final-site -p1 < /tmp/v9.patch
+            cat deploy-v9/part-* | base64 -d | gzip -d > /tmp/v9-full.patch
+            python - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path('/tmp/v9-full.patch').read_text(encoding='utf-8')
+          chunks = re.split(r'(?=^diff -ruN )', source, flags=re.M)
+          keep = []
+          for chunk in chunks:
+              first = chunk.splitlines()[0] if chunk.splitlines() else ''
+              if ' a/public/' in first or ' a/netlify/' in first:
+                  keep.append(chunk)
+          Path('/tmp/v9-deploy.patch').write_text(''.join(keep), encoding='utf-8')
+          PY
+            wc -c /tmp/v9-deploy.patch
+            patch --batch -d final-site -p1 < /tmp/v9-deploy.patch
 
             node --check final-site/public/app.js
             grep -q '学习进度排行榜' final-site/public/index.html
