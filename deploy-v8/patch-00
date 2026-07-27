@@ -1,0 +1,93 @@
+--- a/public/index.html
++++ b/public/index.html
+@@ -6,7 +6,7 @@
+   <meta name="theme-color" content="#1677e8" />
+   <meta name="description" content="适合小五、小六学生的华文朗读与口语会话自主练习应用。" />
+   <title>华文口语练习小助手</title>
+-  <link rel="stylesheet" href="styles.css" />
++  <link rel="stylesheet" href="styles.css?v=8" />
+ </head>
+ <body>
+   <div id="app" class="app-shell">
+@@ -29,7 +29,10 @@
+       <header class="topbar">
+         <button id="mobileMenu" class="mobile-menu" aria-label="打开选单">☰</button>
+         <div><p id="greeting" class="greeting">欢迎回来，小朋友！</p><p class="subtitle">说一说，学一学，一次比一次更进步。</p></div>
+-        <div class="star-box" title="完成一次练习可获得星星">⭐ <strong id="starCount">0</strong></div>
++        <div class="topbar-actions">
++          <button id="openTeacherDashboard" class="teacher-dashboard-trigger" type="button" aria-haspopup="dialog" aria-controls="teacherDashboardModal">👩‍🏫 教师进度</button>
++          <div class="star-box" title="完成一次练习可获得星星">⭐ <strong id="starCount">0</strong></div>
++        </div>
+       </header>
+ 
+       <section id="homeView" class="view active-view">
+@@ -94,8 +97,61 @@
+       <section id="progressView" class="view"><div class="section-head gold-head"><div><button class="back-link" data-nav="home">←</button><span>我的进度</span></div><span id="progressProfileLabel">尚未载入档案</span></div><div class="progress-grid"><article class="progress-card"><span>⭐</span><strong id="progressStars">0</strong><p>累计星星</p></article><article class="progress-card"><span>📖</span><strong id="progressReading">0</strong><p>完成朗读</p></article><article class="progress-card"><span>💬</span><strong id="progressConversation">0</strong><p>完成会话</p></article></div><article class="practice-card progress-detail"><h2>练习记录</h2><div id="progressHistory" class="history-list"></div><button id="resetProgress" class="danger-link">清除这台设备上的练习记录</button></article></section>
+     </main>
+   </div>
++
++  <div id="teacherDashboardModal" class="teacher-dashboard-modal hidden" role="dialog" aria-modal="true" aria-labelledby="teacherDashboardTitle" aria-hidden="true">
++    <button class="teacher-dashboard-backdrop" data-close-teacher-dashboard aria-label="关闭教师进度看板"></button>
++    <section class="teacher-dashboard-panel">
++      <header class="teacher-dashboard-header">
++        <div>
++          <h2 id="teacherDashboardTitle">教师进度</h2>
++          <p>查看学生的朗读与口语练习进度。学生只要继续使用相同的姓名和班级，记录就会累积。</p>
++        </div>
++        <button id="closeTeacherDashboard" class="teacher-dashboard-close" type="button" aria-label="关闭">×</button>
++      </header>
++
++      <div id="teacherDashboardLogin" class="teacher-dashboard-login">
++        <label for="teacherDashboardCode">教师代码</label>
++        <div class="teacher-code-row">
++          <input id="teacherDashboardCode" type="password" autocomplete="current-password" placeholder="输入教师代码" />
++          <button id="loadTeacherDashboard" type="button">查看进度</button>
++        </div>
++        <p id="teacherDashboardLoginMessage">教师代码只保存在这个浏览器会话中。</p>
++      </div>
++
++      <div id="teacherDashboardContent" class="teacher-dashboard-content hidden">
++        <div class="teacher-dashboard-toolbar">
++          <div class="teacher-dashboard-search">
++            <input id="teacherDashboardSearch" type="search" placeholder="搜索姓名或班级" aria-label="搜索姓名或班级" />
++            <select id="teacherDashboardClassFilter" aria-label="筛选班级"><option value="">所有班级</option></select>
++          </div>
++          <div class="teacher-dashboard-actions">
++            <button id="refreshTeacherDashboard" type="button">↻ 刷新</button>
++            <button id="exportTeacherDashboard" type="button">⇩ 导出学生进度</button>
++          </div>
++        </div>
++        <div class="teacher-dashboard-meta">
++          <span id="teacherDashboardCount">0 名学生</span>
++          <span id="teacherDashboardUpdated">尚未更新</span>
++        </div>
++        <div id="teacherDashboardNotice" class="teacher-dashboard-notice hidden"></div>
++        <div class="teacher-dashboard-table-wrap">
++          <table class="teacher-dashboard-table">
++            <thead><tr><th>姓名</th><th>班级</th><th>朗读进度</th><th>口语进度</th><th>最近成绩</th><th>最后学习</th><th></th></tr></thead>
++            <tbody id="teacherDashboardRows"></tbody>
++          </table>
++          <div id="teacherDashboardEmpty" class="teacher-dashboard-empty hidden">暂时没有学生进度。</div>
++        </div>
++        <section id="teacherStudentDetail" class="teacher-student-detail hidden">
++          <div class="teacher-detail-head"><div><span>学生详情</span><h3 id="teacherStudentName"></h3></div><button id="closeTeacherStudentDetail" type="button">关闭详情</button></div>
++          <div id="teacherStudentStats" class="teacher-student-stats"></div>
++          <div id="teacherStudentHistory" class="teacher-student-history"></div>
++        </section>
++      </div>
++    </section>
++  </div>
++
+   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+-  <script src="data.js?v=7"></script>
+-  <script src="app.js?v=7"></script>
++  <script src="data.js?v=8"></script>
++  <script src="app.js?v=8"></script>
+ </body>
+ </html>
+\ No newline at end of file
+--- a/public/styles.css
++++ b/public/styles.css
+@@ -130,3 +130,9 @@
+ /* v7: focused feedback, full sample answer and teacher dashboard sync */
+ .feedback-audio-btn,.feedback-speak-one{border:1px solid #8fc5a3;background:#fff;color:#176b3d;border-radius:10px;padding:8px 11px;font-weight:900;cursor:pointer}.feedback-audio-btn{width:100%;margin:0 0 12px}.feedback-audio-btn.speaking,.feedback-speak-one.speaking{background:#237748;color:#fff}.question-feedback-head{display:flex!important;justify-content:space-between;align-items:center;gap:12px}.question-feedback-head>div{display:flex;align-items:center;gap:7px}.feedback-speak-one{padding:6px 9px;font-size:12px;white-space:nowrap}.teacher-followup{display:block!important;margin-top:9px;background:#fff8e8;border:1px solid #efd18c;border-radius:10px;padding:10px;color:#714c08;line-height:1.5}.sample-direction{display:block!important;margin-top:9px;background:#eef7ff;border-radius:10px;padding:10px;color:#285978;line-height:1.55}.sample-direction small{display:block;margin-top:4px;color:#60758a}.sample-answer-text{white-space:normal;line-height:1.8;color:#29473a}.sample-answer-text p{margin:0 0 12px}.sample-answer-text p:last-child{margin-bottom:0}.sample-answer{max-height:none}.sample-answer[open]{overflow:visible}.profile-reminder{line-height:1.55}.cloud-sync-note{font-size:12px;color:#64788c}.transcript-action-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:9px}.reading-transcript-panel textarea{width:100%;border:1px solid #bdd1e5;border-radius:11px;padding:11px;font:inherit;line-height:1.55;resize:vertical}.question-feedback.retry .feedback-step-chip.try{background:#fff0cf;color:#8b650e;border:0}.question-feedback.retry{background:#fffaf3;border-color:#efdca8}.que
